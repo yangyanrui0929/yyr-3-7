@@ -75,7 +75,7 @@ export function evaluateRules(
   grid: GridCell[][]
 ): Rule[] {
   const isDay = dayTime < DAY_THRESHOLD;
-  const batteryRatio = maxStorage > 0 ? storedPower / maxStorage : 0;
+  const batteryRatio = maxStorage > 0 ? storedPower / maxStorage : 1;
   const hasFault = grid.some((row) => row.some((c) => c.faulty));
 
   return rules.map((rule) => {
@@ -112,10 +112,7 @@ export function calculatePowerNetwork(
   batteryCapacity: number;
   evaluatedRules: Rule[];
 } {
-  const evaluatedRules = evaluateRules(rules, dayTime, storedPower, 0, grid);
-  const isDay = dayTime < DAY_THRESHOLD;
   let totalGeneration = 0;
-  let totalConsumption = 0;
   let batteryCapacity = 0;
 
   const windmillSources: Array<{ x: number; y: number; gen: number }> = [];
@@ -127,6 +124,7 @@ export function calculatePowerNetwork(
       if (cell.faulty) continue;
 
       if (cell.type === 'windmill') {
+        const isDay = dayTime < DAY_THRESHOLD;
         const gen = isDay
           ? BUILDING_STATS.windmill.dayGen
           : BUILDING_STATS.windmill.nightGen;
@@ -136,14 +134,10 @@ export function calculatePowerNetwork(
       if (cell.type === 'battery') {
         batteryCapacity += BUILDING_STATS.battery.storage;
       }
-      if (cell.type === 'house') {
-        totalConsumption += BUILDING_STATS.house.consumption;
-      }
-      if (cell.type === 'factory') {
-        totalConsumption += BUILDING_STATS.factory.consumption;
-      }
     }
   }
+
+  const evaluatedRules = evaluateRules(rules, dayTime, storedPower, batteryCapacity, grid);
 
   const availableFromBatteries = Math.max(0, storedPower);
   const totalAvailable = totalGeneration + availableFromBatteries;
@@ -179,6 +173,10 @@ export function calculatePowerNetwork(
     connectedCells.add(`${s.x},${s.y}`);
   }
 
+  const bypassFaultActive = evaluatedRules.some(
+    (r) => r.action === 'bypass_fault' && r.triggered
+  );
+
   while (queue.length > 0) {
     const current = queue.shift()!;
     const currentCell = grid[current.y][current.x];
@@ -191,27 +189,32 @@ export function calculatePowerNetwork(
       if (nx < 0 || nx >= GRID_SIZE || ny < 0 || ny >= GRID_SIZE) continue;
 
       const neighbor = grid[ny][nx];
-      if (neighbor.faulty) {
-        const bypassFaultRule = evaluatedRules.find(
-          (r) => r.action === 'bypass_fault' && r.triggered
-        );
-        if (!bypassFaultRule) continue;
-      }
-
       const key = `${nx},${ny}`;
       if (visited.has(key)) continue;
 
+      if (neighbor.faulty && !bypassFaultActive) continue;
+
       const canConnectFromCurrent = canCellConnect(currentCell, dir, dayTime, evaluatedRules);
-      const canConnectFromNeighbor = canCellConnect(neighbor, getOppositeDirection(dir), dayTime, evaluatedRules);
+      if (!canConnectFromCurrent) continue;
+
+      let canConnectFromNeighbor = false;
+      if (neighbor.faulty && bypassFaultActive) {
+        canConnectFromNeighbor = true;
+      } else {
+        canConnectFromNeighbor = canCellConnect(neighbor, getOppositeDirection(dir), dayTime, evaluatedRules);
+      }
 
       if (canConnectFromCurrent && canConnectFromNeighbor) {
         visited.add(key);
-        connectedCells.add(key);
+        if (!neighbor.faulty) {
+          connectedCells.add(key);
+        }
         if (
           neighbor.type === 'wire' ||
           neighbor.type === 'relay' ||
           neighbor.type === 'timer' ||
-          neighbor.type === 'priority_valve'
+          neighbor.type === 'priority_valve' ||
+          neighbor.faulty
         ) {
           queue.push({ x: nx, y: ny });
         }
@@ -237,6 +240,16 @@ export function calculatePowerNetwork(
     }
   }
 
+  const cutoffNonessential = evaluatedRules.some(
+    (r) => r.triggered && r.action === 'cutoff_nonessential'
+  );
+  const prioritizedHouse = evaluatedRules.some(
+    (r) => r.triggered && r.action === 'prioritize_house'
+  );
+  const prioritizedFactory = evaluatedRules.some(
+    (r) => r.triggered && r.action === 'prioritize_factory'
+  );
+
   const connectedConsumers: Array<{
     x: number;
     y: number;
@@ -245,15 +258,7 @@ export function calculatePowerNetwork(
     priorityBoost: number;
   }> = [];
 
-  const prioritizedHouse = evaluatedRules.some(
-    (r) => r.triggered && r.action === 'prioritize_house'
-  );
-  const prioritizedFactory = evaluatedRules.some(
-    (r) => r.triggered && r.action === 'prioritize_factory'
-  );
-  const cutoffNonessential = evaluatedRules.some(
-    (r) => r.triggered && r.action === 'cutoff_nonessential'
-  );
+  let totalConsumption = 0;
 
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
@@ -263,14 +268,17 @@ export function calculatePowerNetwork(
         connectedCells.has(`${x},${y}`)
       ) {
         const buildingType = cell.type;
-        let consumption =
-          buildingType === 'house'
-            ? BUILDING_STATS.house.consumption
-            : BUILDING_STATS.factory.consumption;
 
         if (cutoffNonessential && buildingType === 'factory') {
           continue;
         }
+
+        const consumption =
+          buildingType === 'house'
+            ? BUILDING_STATS.house.consumption
+            : BUILDING_STATS.factory.consumption;
+
+        totalConsumption += consumption;
 
         let priorityBoost = 0;
         const valveNearby = hasPriorityValveNeighbor(grid, x, y, connectedCells);
