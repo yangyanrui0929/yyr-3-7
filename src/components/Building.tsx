@@ -12,6 +12,18 @@ export const Building: React.FC<BuildingProps> = ({ cell }) => {
     return <WireVisual rotation={cell.rotation} powered={cell.powered} faulty={cell.faulty} />;
   }
 
+  if (cell.type === 'relay') {
+    return <RelayVisual powered={cell.powered} faulty={cell.faulty} relayOpen={!!cell.relayOpen} />;
+  }
+
+  if (cell.type === 'timer') {
+    return <TimerVisual powered={cell.powered} faulty={cell.faulty} schedule={cell.timerSchedule || 'day'} />;
+  }
+
+  if (cell.type === 'priority_valve') {
+    return <PriorityValveVisual powered={cell.powered} faulty={cell.faulty} target={cell.priorityTarget || 'house'} />;
+  }
+
   const stats = BUILDING_STATS[cell.type];
   const isRotating = cell.type === 'windmill' && cell.powered && !cell.faulty;
 
@@ -108,6 +120,159 @@ const WireVisual: React.FC<WireVisualProps> = ({ rotation, powered, faulty }) =>
           boxShadow: powered || faulty ? `0 0 10px ${glowColor}` : 'none',
         }}
       />
+      {faulty && (
+        <div className="absolute -top-1 -right-1 text-xs animate-pulse">⚠️</div>
+      )}
+    </div>
+  );
+};
+
+interface RelayVisualProps {
+  powered: boolean;
+  faulty: boolean;
+  relayOpen: boolean;
+}
+
+const RelayVisual: React.FC<RelayVisualProps> = ({ powered, faulty, relayOpen }) => {
+  const activeColor = faulty ? '#EF4444' : relayOpen ? '#9CA3AF' : '#10B981';
+  const glowColor = faulty
+    ? 'rgba(239, 68, 68, 0.5)'
+    : relayOpen
+    ? 'transparent'
+    : 'rgba(16, 185, 129, 0.5)';
+
+  const lineStyle: React.CSSProperties = {
+    backgroundColor: activeColor,
+    boxShadow: glowColor !== 'transparent' ? `0 0 8px ${glowColor}` : 'none',
+    transition: 'all 0.3s ease',
+  };
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      <div
+        className="absolute left-1/2 top-0 w-1.5 h-[30%] -translate-x-1/2 rounded-full"
+        style={lineStyle}
+      />
+      <div
+        className="absolute left-1/2 bottom-0 w-1.5 h-[30%] -translate-x-1/2 rounded-full"
+        style={lineStyle}
+      />
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-md border-2 flex items-center justify-center"
+        style={{
+          borderColor: activeColor,
+          backgroundColor: relayOpen ? 'rgba(156,163,175,0.2)' : 'rgba(16,185,129,0.15)',
+          boxShadow: glowColor !== 'transparent' ? `0 0 12px ${glowColor}` : 'none',
+        }}
+      >
+        <span className="text-xs font-bold" style={{ color: activeColor }}>
+          {relayOpen ? 'OFF' : 'ON'}
+        </span>
+      </div>
+      {faulty && (
+        <div className="absolute -top-1 -right-1 text-xs animate-pulse">⚠️</div>
+      )}
+    </div>
+  );
+};
+
+interface TimerVisualProps {
+  powered: boolean;
+  faulty: boolean;
+  schedule: 'day' | 'night';
+}
+
+const TimerVisual: React.FC<TimerVisualProps> = ({ powered, faulty, schedule }) => {
+  const isDaySchedule = schedule === 'day';
+  const activeColor = faulty
+    ? '#EF4444'
+    : powered
+    ? isDaySchedule ? '#F59E0B' : '#6366F1'
+    : '#9CA3AF';
+  const glowColor = faulty
+    ? 'rgba(239, 68, 68, 0.5)'
+    : powered
+    ? isDaySchedule ? 'rgba(245, 158, 11, 0.4)' : 'rgba(99, 102, 241, 0.4)'
+    : 'transparent';
+
+  const lineStyle: React.CSSProperties = {
+    backgroundColor: activeColor,
+    boxShadow: glowColor !== 'transparent' ? `0 0 8px ${glowColor}` : 'none',
+    transition: 'all 0.3s ease',
+  };
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      <div
+        className="absolute left-1/2 top-0 w-1.5 h-[30%] -translate-x-1/2 rounded-full"
+        style={lineStyle}
+      />
+      <div
+        className="absolute left-1/2 bottom-0 w-1.5 h-[30%] -translate-x-1/2 rounded-full"
+        style={lineStyle}
+      />
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full border-2 flex items-center justify-center"
+        style={{
+          borderColor: activeColor,
+          backgroundColor: isDaySchedule ? 'rgba(245,158,11,0.15)' : 'rgba(99,102,241,0.15)',
+          boxShadow: glowColor !== 'transparent' ? `0 0 12px ${glowColor}` : 'none',
+        }}
+      >
+        <span className="text-sm">{isDaySchedule ? '☀️' : '🌙'}</span>
+      </div>
+      {faulty && (
+        <div className="absolute -top-1 -right-1 text-xs animate-pulse">⚠️</div>
+      )}
+    </div>
+  );
+};
+
+interface PriorityValveVisualProps {
+  powered: boolean;
+  faulty: boolean;
+  target: 'house' | 'factory';
+}
+
+const PriorityValveVisual: React.FC<PriorityValveVisualProps> = ({ powered, faulty, target }) => {
+  const isHouse = target === 'house';
+  const activeColor = faulty
+    ? '#EF4444'
+    : powered
+    ? isHouse ? '#10B981' : '#F97316'
+    : '#9CA3AF';
+  const glowColor = faulty
+    ? 'rgba(239, 68, 68, 0.5)'
+    : powered
+    ? isHouse ? 'rgba(16, 185, 129, 0.4)' : 'rgba(249, 115, 22, 0.4)'
+    : 'transparent';
+
+  const lineStyle: React.CSSProperties = {
+    backgroundColor: activeColor,
+    boxShadow: glowColor !== 'transparent' ? `0 0 8px ${glowColor}` : 'none',
+    transition: 'all 0.3s ease',
+  };
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      <div
+        className="absolute left-1/2 top-0 w-1.5 h-[30%] -translate-x-1/2 rounded-full"
+        style={lineStyle}
+      />
+      <div
+        className="absolute left-1/2 bottom-0 w-1.5 h-[30%] -translate-x-1/2 rounded-full"
+        style={lineStyle}
+      />
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-md border-2 flex items-center justify-center rotate-45"
+        style={{
+          borderColor: activeColor,
+          backgroundColor: isHouse ? 'rgba(16,185,129,0.15)' : 'rgba(249,115,22,0.15)',
+          boxShadow: glowColor !== 'transparent' ? `0 0 12px ${glowColor}` : 'none',
+        }}
+      >
+        <span className="text-sm -rotate-45">{isHouse ? '🏠' : '🏭'}</span>
+      </div>
       {faulty && (
         <div className="absolute -top-1 -right-1 text-xs animate-pulse">⚠️</div>
       )}

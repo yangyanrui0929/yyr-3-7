@@ -2,6 +2,7 @@ import { FloatingIsland } from '@/components/FloatingIsland';
 import { Toolbar } from '@/components/Toolbar';
 import { StatusBar } from '@/components/StatusBar';
 import { SettlementModal } from '@/components/SettlementModal';
+import { RuleChainPanel } from '@/components/RuleChainPanel';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { useGameStore } from '@/store/useGameStore';
 
@@ -51,7 +52,8 @@ export default function Home() {
             <FloatingIsland />
           </div>
 
-          <div className="order-3 lg:w-56 hidden lg:block">
+          <div className="order-3 lg:w-64 flex flex-col gap-4">
+            <RuleChainPanel />
             <GameGuide isNight={isNight} />
           </div>
         </div>
@@ -149,6 +151,18 @@ function GameGuide({ isNight }: { isNight: boolean }) {
         <li>
           <span className="inline-block w-4 mr-1">⚡</span>
           <b>电线</b>连接建筑，可旋转
+        </li>
+        <li>
+          <span className="inline-block w-4 mr-1">🔌</span>
+          <b>继电器</b>规则触发时断开线路
+        </li>
+        <li>
+          <span className="inline-block w-4 mr-1">⏰</span>
+          <b>定时器</b>白天/夜晚自动切换
+        </li>
+        <li>
+          <span className="inline-block w-4 mr-1">🔀</span>
+          <b>优先阀</b>控制供电优先级
         </li>
       </ul>
       <div className="mt-4 pt-3 border-t border-gray-300/30">

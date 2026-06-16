@@ -19,6 +19,7 @@ export const GridCellComponent: React.FC<GridCellProps> = ({
   const canPlace = isEmpty && selectedTool !== 'remove';
   const canRemove = !isEmpty && selectedTool === 'remove';
   const canRepair = cell.faulty;
+  const canToggle = (cell.type === 'wire' || cell.type === 'relay' || cell.type === 'timer' || cell.type === 'priority_valve') && !cell.faulty;
 
   return (
     <div
@@ -41,6 +42,11 @@ export const GridCellComponent: React.FC<GridCellProps> = ({
       {canRepair && (
         <div className="absolute inset-0 flex items-center justify-center bg-orange-500/20 z-10">
           <span className="text-xs font-bold text-white drop-shadow-lg">🔧维修</span>
+        </div>
+      )}
+      {canToggle && !canRepair && cell.type !== 'wire' && (
+        <div className="absolute -bottom-0.5 right-0 text-[8px] text-white/60 font-semibold bg-black/20 px-0.5 rounded">
+          R切换
         </div>
       )}
     </div>

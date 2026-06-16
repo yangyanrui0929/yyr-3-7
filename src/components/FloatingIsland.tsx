@@ -18,7 +18,10 @@ export const FloatingIsland: React.FC = () => {
   const handleCellRightClick = (e: React.MouseEvent, x: number, y: number) => {
     e.preventDefault();
     const cell = grid[y][x];
-    if (cell.type === 'wire' && !cell.faulty) {
+    if (
+      (cell.type === 'wire' || cell.type === 'relay' || cell.type === 'timer' || cell.type === 'priority_valve') &&
+      !cell.faulty
+    ) {
       rotateCell(x, y);
     }
   };
@@ -31,7 +34,10 @@ export const FloatingIsland: React.FC = () => {
           const x = parseInt(hovered.dataset.x || '0');
           const y = parseInt(hovered.dataset.y || '0');
           const cell = grid[y][x];
-          if (cell.type === 'wire' && !cell.faulty) {
+          if (
+            (cell.type === 'wire' || cell.type === 'relay' || cell.type === 'timer' || cell.type === 'priority_valve') &&
+            !cell.faulty
+          ) {
             rotateCell(x, y);
           }
         }

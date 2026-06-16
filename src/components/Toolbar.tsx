@@ -6,6 +6,9 @@ import { RotateCw } from 'lucide-react';
 export const Toolbar: React.FC = () => {
   const { selectedTool, setSelectedTool, resetGame, openSettlement } = useGameStore();
 
+  const basicTools = TOOLS.filter((t) => !['relay', 'timer', 'priority_valve'].includes(t.type));
+  const logicTools = TOOLS.filter((t) => ['relay', 'timer', 'priority_valve'].includes(t.type));
+
   return (
     <div className="flex flex-col gap-3">
       <div className="bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-white/50">
@@ -13,7 +16,7 @@ export const Toolbar: React.FC = () => {
           🛠️ 建筑工具
         </h3>
         <div className="grid grid-cols-2 gap-2">
-          {TOOLS.map((tool) => (
+          {basicTools.map((tool) => (
             <button
               key={tool.type}
               onClick={() => setSelectedTool(tool.type)}
@@ -30,6 +33,33 @@ export const Toolbar: React.FC = () => {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-purple-200/50">
+        <h3 className="text-sm font-bold text-purple-700 mb-3 flex items-center gap-2">
+          ⚙️ 逻辑开关
+        </h3>
+        <div className="grid grid-cols-3 gap-2">
+          {logicTools.map((tool) => (
+            <button
+              key={tool.type}
+              onClick={() => setSelectedTool(tool.type)}
+              className={`
+                flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-200
+                ${selectedTool === tool.type
+                  ? 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg scale-105 ring-2 ring-purple-300'
+                  : 'bg-white/70 hover:bg-white text-purple-700 hover:scale-102'
+                }
+              `}
+            >
+              <span className="text-2xl">{tool.emoji}</span>
+              <span className="text-[10px] font-semibold leading-tight text-center">{tool.name}</span>
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] text-purple-500 mt-2 text-center">
+          右键/R键切换模式
+        </p>
       </div>
 
       <div className="bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-white/50">
